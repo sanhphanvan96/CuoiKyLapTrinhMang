@@ -77,7 +77,7 @@ class Report extends Thread {
 
 	private void sendReport() {
 		try {
-			dos.writeUTF("subserver@" + this.server.getLocalPort());
+			dos.writeUTF("subserver@@@" + this.server.getLocalPort());
 			System.out.println("Report to Master Server: " + "subserver@" + this.server.getLocalPort());
 		} catch (IOException e) {
 			e.printStackTrace();

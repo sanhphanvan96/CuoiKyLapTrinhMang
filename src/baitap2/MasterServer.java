@@ -1,8 +1,11 @@
 package baitap2;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -14,6 +17,8 @@ public class MasterServer {
 		try {
 			ServerSocket server = new ServerSocket(port);
 			System.out.println("Master Server is running at port " + server.getLocalPort());
+			// run new subserver
+			new SubServerManager().startNewSubServer();
 			while (true) {
 				process = new RequestProcessing(this, server.accept());
 				process.start();
@@ -78,7 +83,7 @@ class RequestProcessing extends Thread {
 	private void handleReceivedData(String receivedData) {
 		try {
 			// msg@@@data
-			this.splitReceivedData = receivedData.split("@");
+			this.splitReceivedData = receivedData.split("@@@");
 			this.msg = splitReceivedData[0];
 			this.data = splitReceivedData[1];
 			// System.out.println("handleReceivedData: " + msg + ", " + data);
@@ -101,10 +106,14 @@ class SubServerManager {
 		this.recentReportTime = System.currentTimeMillis();
 	}
 
+	public SubServerManager() {
+	}
+
 	public void monitor() {
 		while (true) {
 			if (!this.isSubserverStillWork()) {
 				this.startNewSubServer();
+				this.stopCurrentThread();
 			}
 			try {
 				if (dis.available() != 0) {
@@ -119,17 +128,28 @@ class SubServerManager {
 		}
 	}
 
-	private void startNewSubServer() {
-		System.out.println("Starting new subserver!");
-		System.out.println("Interrup this thread: " + Thread.currentThread().getId());
+	private void stopCurrentThread() {
+		System.out.println("Interrupt this thread: " + Thread.currentThread().getId());
 		Thread.currentThread().interrupt();
+	}
+
+	public void startNewSubServer() {
+		System.out.println("=> Starting new subserver!");
+		ProcessBuilder processBuilder = new ProcessBuilder("C:\\Users\\Hi-XV\\Desktop\\test.bat");
+		try {
+			Process process = processBuilder.start();
+			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+			System.out.println("Process output: " + reader.readLine());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private boolean isSubserverStillWork() {
 		long period = System.currentTimeMillis() - recentReportTime;
 		// kiem tra da sau 2 phut chua
 		if (period >= 120000) {
-			System.out.println("=> After 2 minute!");
+			System.out.println("=> After 2 minute but not received report!");
 			recentReportTime = System.currentTimeMillis();
 			return false;
 		}
@@ -150,7 +170,10 @@ class ClientManager {
 
 	public void replyPortOfSubServer() {
 		try {
-			dos.writeUTF("subserver@@@" + server.subserverPort);
+			String sendingData = "subserver@@@" + server.subserverPort;
+			System.out.println("Reply to client: " + sendingData);
+			System.out.println("Close the socket connected with client");
+			dos.writeUTF(sendingData);
 			dos.close();
 			socket.close();
 		} catch (IOException e) {
